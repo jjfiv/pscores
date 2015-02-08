@@ -1,0 +1,11 @@
+package com.github.jjfiv.pscores;
+
+type TermDocPositionScore {
+  int term;
+  int doc;
+  int position;
+  double score;
+
+  order: +term +doc +position; // by term then by document, then by position
+}
+

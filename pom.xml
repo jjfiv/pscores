@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.github.jjfiv</groupId>
+  <artifactId>pscores</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <javaVersion>1.7</javaVersion>
+    <galagoVersion>3.8-SNAPSHOT</galagoVersion>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+      <type>jar</type>
+    </dependency>
+
+    <dependency>
+      <groupId>org.lemurproject.galago</groupId>
+      <artifactId>core</artifactId>
+      <version>${galagoVersion}</version>
+    </dependency>
+  </dependencies>
+
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>edu.umass.ciir.snapshots</id>
+      <name>CIIR Nexus Snapshots</name>
+      <url>http://scm-ciir.cs.umass.edu:8080/nexus/content/repositories/snapshots</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>edu.umass.ciir.releases</id>
+      <name>CIIR Nexus Releases</name>
+      <url>http://scm-ciir.cs.umass.edu:8080/nexus/content/repositories/releases</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <build>
+    <plugins>
+
+      <!-- build a jar with relative classpath -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.4</version>
+        <configuration>
+          <archive>
+            <index>true</index>
+            <manifest>
+              <classpathPrefix>lib/</classpathPrefix>
+              <addClasspath>true</addClasspath>
+              <useUniqueVersions>false</useUniqueVersions>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <!-- this is entirely to set the java version -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>${javaVersion}</source>
+          <target>${javaVersion}</target>
+        </configuration>
+      </plugin>
+
+      <!-- copy dependencies to relative classpath -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/lib</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- tupleflow-typebuilder -->
+      <plugin>
+        <groupId>org.lemurproject.galago</groupId>
+        <artifactId>tupleflow-typebuilder</artifactId>
+        <version>${galagoVersion}</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>typebuilder</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>
