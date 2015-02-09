@@ -45,7 +45,7 @@ public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 	}
 
 	private void readNextDocument() throws IOException {
-		if(!isDone()) {
+		if(docIndex < totalDocs) {
 			docIndex++;
 			docId += data.readInt();
 			score = data.readDouble();
@@ -77,13 +77,9 @@ public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 		initialize();
 	}
 
-	public boolean hasNext() {
-		return docIndex < totalDocs;
-	}
-
 	@Override
 	public boolean isDone() {
-		return !hasNext();
+		return docId == Integer.MAX_VALUE;
 	}
 
 	@Override

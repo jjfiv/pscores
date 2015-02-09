@@ -9,35 +9,9 @@ import org.lemurproject.galago.core.retrieval.processing.ScoringContext;
 import org.lemurproject.galago.core.retrieval.query.Node;
 import org.lemurproject.galago.utility.Parameters;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-
 import static org.junit.Assert.*;
 
 public class ScoreIndexWriterTest {
-
-	public static class TemporaryFile implements Closeable {
-		File tmp;
-
-		public TemporaryFile(String suffix) throws IOException {
-			tmp = File.createTempFile("tmpf", suffix);
-		}
-
-		File get() {
-			return tmp;
-		}
-
-		String getPath() {
-			return get().getAbsolutePath();
-		}
-
-		@Override
-		public void close() throws IOException {
-			boolean status = tmp.delete();
-			assertTrue(status);
-		}
-	}
 
 	@Test
 	public void testProcessTuple() throws Exception {
@@ -75,12 +49,31 @@ public class ScoreIndexWriterTest {
 				assertEquals(0.1, x.minimumScore(), 0.0001);
 				assertEquals(1.0, x.maximumScore(), 0.0001);
 
+
 				assertFalse(x.isDone());
 
 				ctx.document = 1;
 				x.syncTo(ctx.document);
+				assertFalse(x.isDone());
 				assertEquals(0.1, x.score(ctx), 0.0001);
 
+				ctx.document = 2;
+				x.syncTo(ctx.document);
+				assertFalse(x.isDone());
+				assertEquals(0.2, x.score(ctx), 0.0001);
+
+				ctx.document = 3;
+				x.syncTo(ctx.document);
+				assertFalse(x.isDone());
+				assertEquals(1.0, x.score(ctx), 0.0001);
+
+				ctx.document = 4;
+				x.syncTo(ctx.document);
+				assertFalse(x.isDone());
+				assertEquals(0.7, x.score(ctx), 0.0001);
+
+				x.movePast(4);
+				assertTrue(x.isDone());
 			}
 
 		}
