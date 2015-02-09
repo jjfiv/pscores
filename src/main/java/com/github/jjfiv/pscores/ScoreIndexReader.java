@@ -79,7 +79,7 @@ public class ScoreIndexReader extends KeyListReader {
 			return new DiskScoreIterator(getValueSource());
 		}
 
-		public ScoreSource getValueSource() {
+		public ScoreSource getValueSource() throws IOException {
 			return new ScoreIndexSource(iterator);
 		}
 	}

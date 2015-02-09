@@ -3,6 +3,7 @@ package com.github.jjfiv.pscores;
 import org.lemurproject.galago.core.index.source.BTreeValueSource;
 import org.lemurproject.galago.core.index.source.ScoreSource;
 import org.lemurproject.galago.utility.btree.BTreeIterator;
+import org.lemurproject.galago.utility.buffer.DataStream;
 import org.lemurproject.galago.utility.buffer.VByteInput;
 
 import java.io.IOException;
@@ -12,12 +13,14 @@ import java.io.IOException;
  */
 public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 	private final double defaultScore;
-	private final double minScore;
-	private final double maxScore;
+	private double minScore;
+	private double maxScore;
 	VByteInput data;
 	boolean hasCurrent;
 	long docId;
 	double score;
+	private int totalDocs;
+	private int docIndex;
 
 
 	public ScoreIndexSource(BTreeIterator iterator) throws IOException {
@@ -29,21 +32,34 @@ public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 	}
 
 	private void initialize() throws IOException {
-		data = new VByteInput(btreeIter.getValueStream());
+		DataStream valueStream = btreeIter.getValueStream();
+		data = new VByteInput(valueStream);
 		hasCurrent = true;
 		score = defaultScore;
 		docId = 0;
+		docIndex = 0;
+		totalDocs = valueStream.readInt();
+		minScore = valueStream.readDouble();
+		maxScore = valueStream.readDouble();
 		readNextDocument();
 	}
 
 	private void readNextDocument() throws IOException {
-		if(!hasCurrent) return;
-		docId += data.readLong();
+		if(!isDone()) {
+			docIndex++;
+			docId += data.readInt();
+			score = data.readDouble();
+		} else {
+			docId = Integer.MAX_VALUE;
+		}
 	}
 
 	@Override
 	public double score(long id) {
-		return 0;
+		if(docId == id) {
+			return score;
+		}
+		return Double.MIN_VALUE;
 	}
 
 	@Override
@@ -61,9 +77,13 @@ public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 		initialize();
 	}
 
+	public boolean hasNext() {
+		return docIndex < totalDocs;
+	}
+
 	@Override
 	public boolean isDone() {
-		return false;
+		return !hasNext();
 	}
 
 	@Override
@@ -73,21 +93,23 @@ public class ScoreIndexSource extends BTreeValueSource implements ScoreSource {
 
 	@Override
 	public long totalEntries() {
-		return 0;
+		return totalDocs;
 	}
 
 	@Override
 	public long currentCandidate() {
-		return 0;
+		return docId;
 	}
 
 	@Override
 	public void movePast(long id) throws IOException {
-
+		syncTo(id+1);
 	}
 
 	@Override
 	public void syncTo(long id) throws IOException {
-
+		while(docId < id) {
+			readNextDocument();
+		}
 	}
 }
