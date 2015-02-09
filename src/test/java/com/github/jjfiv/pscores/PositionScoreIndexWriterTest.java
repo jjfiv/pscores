@@ -24,13 +24,10 @@ public class PositionScoreIndexWriterTest {
 				psiw.processDoc(1);
 				psiw.processPosition(0);
 				psiw.processTuple(0.0);
-
 				psiw.processPosition(3);
 				psiw.processTuple(0.3);
-
 				psiw.processPosition(7);
 				psiw.processTuple(0.7);
-
 				psiw.processPosition(10);
 				psiw.processTuple(1.0);
 
@@ -65,6 +62,15 @@ public class PositionScoreIndexWriterTest {
 				PositionalScoreIterator x = (PositionalScoreIterator) baseIter;
 
 				assertFalse(x.isDone());
+
+				ctx.document = 1;
+				x.syncTo(ctx.document);
+				assertFalse(x.isDone());
+				PositionalScoreArray pscores = x.data(ctx);
+				assertEquals(4, pscores.positions.size());
+				assertEquals(4, pscores.scores.size());
+				assertArrayEquals(new double[] {0.0, 0.3, 0.7, 1.0}, pscores.scores.toArray(), 0.001);
+				assertArrayEquals(new int[] {0, 3, 7, 10}, pscores.positions.toArray());
 
 
 			}
