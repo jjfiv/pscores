@@ -5,6 +5,7 @@ import org.lemurproject.galago.tupleflow.Sorter;
 import org.lemurproject.galago.tupleflow.error.IncompatibleProcessorException;
 import org.lemurproject.galago.utility.Parameters;
 import org.lemurproject.galago.utility.StreamCreator;
+import org.lemurproject.galago.utility.tools.Arguments;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class BuildFromTSV {
 	}
 
 	public static void main(String[] args) throws IOException {
-		BuildFromTSV.buildIndex(Parameters.parseArgs(args));
+		BuildFromTSV.buildIndex(Arguments.parse(args));
 	}
 
 }
