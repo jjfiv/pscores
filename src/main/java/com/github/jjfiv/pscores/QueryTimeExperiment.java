@@ -5,6 +5,7 @@ import com.github.jjfiv.pscores.util.RandUtil;
 import org.lemurproject.galago.core.index.IndexPartReader;
 import org.lemurproject.galago.core.index.KeyIterator;
 import org.lemurproject.galago.core.index.disk.DiskIndex;
+import org.lemurproject.galago.core.retrieval.iterator.ScoreCombinationIterator;
 import org.lemurproject.galago.core.retrieval.iterator.ScoreIterator;
 import org.lemurproject.galago.core.retrieval.processing.ScoringContext;
 import org.lemurproject.galago.core.retrieval.query.Node;
@@ -66,42 +67,52 @@ public class QueryTimeExperiment {
 		}
 	}
 
+	public static FixedSizeMinHeap<IntDocResult> makeHeap(int depth) {
+		return new FixedSizeMinHeap<>(IntDocResult.class, depth, new Comparator<IntDocResult>() {
+			@Override
+			public int compare(IntDocResult lhs, IntDocResult rhs) {
+				return -CmpUtil.compare(lhs.score, rhs.score);
+			}
+		});
+	}
+
+	public static int runQueryCountTopK(List<ScoreIterator> children) throws IOException {
+		FixedSizeMinHeap<IntDocResult> heap = makeHeap(1000);
+		ScoreIterator iter = new ScoreCombinationIterator(new NodeParameters(), children.toArray(new ScoreIterator[children.size()]));
+		ScoringContext ctx = new ScoringContext();
+		while(!iter.isDone()) {
+			ctx.document = iter.currentCandidate();
+			iter.syncTo(ctx.document);
+			double score = iter.score(ctx);
+			heap.offer(new IntDocResult((int) ctx.document, score));
+			iter.movePast(ctx.document);
+		}
+		return heap.size();
+	}
+
 	private static void runAOTQueries(ScoreIndexReader reader) throws IOException {
 		Set<Integer> concepts = collectAllKeys(reader.getIterator());
 		System.out.println("Flattened Index: |concepts|="+concepts.size());
 
-		List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 30, new Random(13));
+		for (int i = 0; i < 100; i++) {
+			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, new Random(13));
 
-		System.out.println(randConcepts);
-
-		for (Integer randConcept : randConcepts) {
-			long start = System.currentTimeMillis();
-
-			FixedSizeMinHeap<IntDocResult> heap = new FixedSizeMinHeap<>(IntDocResult.class, 200, new Comparator<IntDocResult>() {
-				@Override
-				public int compare(IntDocResult lhs, IntDocResult rhs) {
-					return -CmpUtil.compare(lhs.score, rhs.score);
-				}
-			});
-
-			Node scores = new Node("scores", randConcept.toString());
-			ScoreIterator iter = (ScoreIterator) reader.getIterator(scores);
-			ScoringContext ctx = new ScoringContext();
-			while(!iter.isDone()) {
-				ctx.document = iter.currentCandidate();
-				iter.syncTo(ctx.document);
-				double score = iter.score(ctx);
-				heap.offer(new IntDocResult((int) ctx.document, score));
-				iter.movePast(ctx.document);
+			List<ScoreIterator> children = new ArrayList<>();
+			for (Integer randConcept : randConcepts) {
+				Node scores = new Node("scores", randConcept.toString());
+				children.add((ScoreIterator) reader.getIterator(scores));
 			}
 
+			long start = System.currentTimeMillis();
+			int heap_size = runQueryCountTopK(children);
 			long end = System.currentTimeMillis();
 
-			System.out.println(Parameters.parseArray(
-				"numResults", heap.size(),
+			System.out.println(end-start);
+			/*System.out.println(Parameters.parseArray(
+				"numResults", heap_size,
 				"time_ms", end - start,
-				"concept", randConcept
-			));
+				"n", randConcepts.size()
+			));*/
 		}
 
 	}
@@ -109,40 +120,30 @@ public class QueryTimeExperiment {
 	private static void runJITQueries(PositionScoreIndexReader reader) throws IOException {
 		Set<Integer> concepts = collectAllKeys(reader.getIterator());
 		System.out.println("Full Index: |concepts|="+concepts.size());
-		List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 30, new Random(13));
 
-		System.out.println(randConcepts);
 
-		for (Integer randConcept : randConcepts) {
-			long start = System.currentTimeMillis();
+		for (int i = 0; i < 100; i++) {
+			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, new Random(13));
 
-			FixedSizeMinHeap<IntDocResult> heap = new FixedSizeMinHeap<>(IntDocResult.class, 200, new Comparator<IntDocResult>() {
-				@Override
-				public int compare(IntDocResult lhs, IntDocResult rhs) {
-					return -CmpUtil.compare(lhs.score, rhs.score);
-				}
-			});
-
-			Node scores = new Node("pscores", randConcept.toString());
-			NodeParameters np = new NodeParameters();
-			np.set("scoreThreshold", 0.5);
-			ScoreIterator iter = new IndependentIterator(np,  (PositionalScoreIterator) reader.getIterator(scores));
-			ScoringContext ctx = new ScoringContext();
-			while(!iter.isDone()) {
-				ctx.document = iter.currentCandidate();
-				iter.syncTo(ctx.document);
-				double score = iter.score(ctx);
-				heap.offer(new IntDocResult((int) ctx.document, score));
-				iter.movePast(ctx.document);
+			List<ScoreIterator> children = new ArrayList<>();
+			for (Integer randConcept : randConcepts) {
+				Node scores = new Node("pscores", randConcept.toString());
+				NodeParameters np = new NodeParameters();
+				np.set("scoreThreshold", 0.5);
+				ScoreIterator iter = new IndependentIterator(np,  (PositionalScoreIterator) reader.getIterator(scores));
+				children.add(iter);
 			}
 
+			long start = System.currentTimeMillis();
+			int heap_size = runQueryCountTopK(children);
 			long end = System.currentTimeMillis();
 
-			System.out.println(Parameters.parseArray(
-				"numResults", heap.size(),
+			System.out.println(end-start);
+			/*System.out.println(Parameters.parseArray(
+				"numResults", heap_size,
 				"time_ms", end - start,
-				"concept", randConcept
-			));
+				"n", randConcepts.size()
+			));*/
 		}
 	}
 }
