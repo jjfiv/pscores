@@ -1,5 +1,6 @@
 package com.github.jjfiv.pscores;
 
+import com.github.jjfiv.pscores.scoring.IndependentIterator;
 import com.github.jjfiv.pscores.util.RandUtil;
 import org.lemurproject.galago.core.index.IndexPartReader;
 import org.lemurproject.galago.core.index.KeyIterator;
@@ -7,6 +8,7 @@ import org.lemurproject.galago.core.index.disk.DiskIndex;
 import org.lemurproject.galago.core.retrieval.iterator.ScoreIterator;
 import org.lemurproject.galago.core.retrieval.processing.ScoringContext;
 import org.lemurproject.galago.core.retrieval.query.Node;
+import org.lemurproject.galago.core.retrieval.query.NodeParameters;
 import org.lemurproject.galago.tupleflow.Utility;
 import org.lemurproject.galago.utility.CmpUtil;
 import org.lemurproject.galago.utility.FixedSizeMinHeap;
@@ -110,5 +112,37 @@ public class QueryTimeExperiment {
 		List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 30, new Random(13));
 
 		System.out.println(randConcepts);
+
+		for (Integer randConcept : randConcepts) {
+			long start = System.currentTimeMillis();
+
+			FixedSizeMinHeap<IntDocResult> heap = new FixedSizeMinHeap<>(IntDocResult.class, 200, new Comparator<IntDocResult>() {
+				@Override
+				public int compare(IntDocResult lhs, IntDocResult rhs) {
+					return -CmpUtil.compare(lhs.score, rhs.score);
+				}
+			});
+
+			Node scores = new Node("pscores", randConcept.toString());
+			NodeParameters np = new NodeParameters();
+			np.set("scoreThreshold", 0.5);
+			ScoreIterator iter = new IndependentIterator(np,  (PositionalScoreIterator) reader.getIterator(scores));
+			ScoringContext ctx = new ScoringContext();
+			while(!iter.isDone()) {
+				ctx.document = iter.currentCandidate();
+				iter.syncTo(ctx.document);
+				double score = iter.score(ctx);
+				heap.offer(new IntDocResult((int) ctx.document, score));
+				iter.movePast(ctx.document);
+			}
+
+			long end = System.currentTimeMillis();
+
+			System.out.println(Parameters.parseArray(
+				"numResults", heap.size(),
+				"time_ms", end - start,
+				"concept", randConcept
+			));
+		}
 	}
 }
