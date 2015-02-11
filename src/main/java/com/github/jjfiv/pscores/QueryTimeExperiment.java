@@ -94,8 +94,9 @@ public class QueryTimeExperiment {
 		Set<Integer> concepts = collectAllKeys(reader.getIterator());
 		System.out.println("Flattened Index: |concepts|="+concepts.size());
 
+		Random rand = new Random(13);
 		for (int i = 0; i < 100; i++) {
-			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, new Random(13));
+			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, rand);
 
 			List<ScoreIterator> children = new ArrayList<>();
 			for (Integer randConcept : randConcepts) {
@@ -121,9 +122,9 @@ public class QueryTimeExperiment {
 		Set<Integer> concepts = collectAllKeys(reader.getIterator());
 		System.out.println("Full Index: |concepts|="+concepts.size());
 
-
+		Random rand = new Random(13);
 		for (int i = 0; i < 100; i++) {
-			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, new Random(13));
+			List<Integer> randConcepts = RandUtil.sampleRandomly(concepts, 20, rand);
 
 			List<ScoreIterator> children = new ArrayList<>();
 			for (Integer randConcept : randConcepts) {
